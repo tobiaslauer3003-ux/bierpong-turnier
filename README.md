@@ -66,21 +66,39 @@ eine feste Fake-Adresse `username@bierpong.local` erzeugt (siehe
 mit bereits bestätigter E-Mail an — es ist also **keine** Änderung an den
 Supabase-Auth-Einstellungen (z. B. „Confirm email“) nötig.
 
-## 5. Deployment (Vercel + Supabase)
+## 5. Deployment (Netlify + Supabase)
 
-1. Repo zu GitHub pushen (`git remote add origin ...` + `git push`)
-2. Auf [vercel.com](https://vercel.com) → **New Project** → Repo auswählen
-3. Unter **Environment Variables** dieselben drei Variablen wie in
-   `.env.local` eintragen (Scope: Production + Preview)
-4. Deploy — Vercel erkennt Next.js automatisch, kein Build-Command-Override
-   nötig
-5. Supabase-Projekt bleibt unverändert bestehen (Schema wurde bereits im
+Das Projekt ist für Netlify vorbereitet: `netlify.toml` + `@netlify/plugin-nextjs`
+sind bereits enthalten und übernehmen automatisch SSR, Route Handler und den
+Next.js „Proxy“ (Session-Refresh/Route-Schutz).
+
+1. **Repo zu GitHub pushen** (lokales Git-Repo existiert bereits, Commit ist
+   drin):
+   ```bash
+   git remote add origin https://github.com/<dein-user>/<dein-repo>.git
+   git branch -M main
+   git push -u origin main
+   ```
+   (Repo vorher leer auf [github.com/new](https://github.com/new) anlegen,
+   ohne README/.gitignore — sonst gibt es einen Merge-Konflikt beim Push.)
+2. Auf [app.netlify.com](https://app.netlify.com) → **Add new site** →
+   **Import an existing project** → GitHub-Repo auswählen
+3. Netlify erkennt Next.js automatisch (Build-Command/Publish-Verzeichnis
+   kommen aus `netlify.toml`) — nichts anpassen nötig
+4. Unter **Site configuration → Environment variables** dieselben drei
+   Variablen wie in `.env.local` eintragen:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY` (als *sensitive* markieren)
+5. **Deploy site** klicken
+6. Supabase-Projekt bleibt unverändert bestehen (Schema wurde bereits im
    SQL Editor eingerichtet, siehe Schritt 3)
 
-Danach ist die App unter der Vercel-URL erreichbar und lässt sich auf dem
+Danach ist die App unter der Netlify-URL erreichbar und lässt sich auf dem
 Handy über „Zum Startbildschirm hinzufügen“ als PWA installieren
 (Icon/Manifest/Service Worker sind bereits eingerichtet, siehe
-`public/manifest.json` und `public/sw.js`).
+`public/manifest.json` und `public/sw.js`). Jeder weitere `git push` auf
+`main` deployt danach automatisch neu.
 
 ## 6. Realtime testen
 
