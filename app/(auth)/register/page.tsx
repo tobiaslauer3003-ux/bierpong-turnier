@@ -12,6 +12,7 @@ export default function RegisterPage() {
   const router = useRouter();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [accessCode, setAccessCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -19,7 +20,7 @@ export default function RegisterPage() {
     e.preventDefault();
     setError(null);
 
-    const parsed = registerSchema.safeParse({ username, password });
+    const parsed = registerSchema.safeParse({ username, password, accessCode });
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? "Ungültige Eingabe");
       return;
@@ -96,6 +97,22 @@ export default function RegisterPage() {
               required
             />
             <p className="mt-1 text-xs text-muted-foreground">Mindestens 8 Zeichen</p>
+          </div>
+          <div>
+            <label htmlFor="accessCode" className="mb-1 block text-sm font-medium">
+              Zugangscode
+            </label>
+            <input
+              id="accessCode"
+              name="accessCode"
+              className="h-12 w-full rounded-xl border-2 border-border bg-background px-4 text-base outline-none focus:border-primary"
+              value={accessCode}
+              onChange={(e) => setAccessCode(e.target.value)}
+              required
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Frag deinen Jugendleiter, falls du ihn nicht kennst
+            </p>
           </div>
 
           {error && (

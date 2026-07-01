@@ -13,7 +13,12 @@ export async function POST(request: Request) {
     );
   }
 
-  const { username, password } = parsed.data;
+  const { username, password, accessCode } = parsed.data;
+
+  if (accessCode !== process.env.SIGNUP_ACCESS_CODE) {
+    return NextResponse.json({ error: "Ungültiger Zugangscode." }, { status: 403 });
+  }
+
   const email = usernameToEmail(username);
   const admin = await createAdminClient();
 

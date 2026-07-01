@@ -14,6 +14,7 @@ export const passwordSchema = z
 export const registerSchema = z.object({
   username: usernameSchema,
   password: passwordSchema,
+  accessCode: z.string().min(1, "Zugangscode erforderlich"),
 });
 
 export const loginSchema = z.object({
