@@ -12,6 +12,7 @@ import {
   inviteToTeam,
   acceptInvite,
   declineInvite,
+  disbandTeam,
 } from "@/lib/actions/teams";
 
 type Player = { username: string; avatar_color: string } | null;
@@ -73,37 +74,43 @@ function InviteRow({
   onDone: () => void;
 }) {
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function respond(action: (id: string) => Promise<{ error?: string }>) {
     setPending(true);
+    setError(null);
     const res = await action(invite.id);
     setPending(false);
-    if (!res.error) onDone();
+    if (res.error) setError(res.error);
+    else onDone();
   }
 
   return (
-    <li className="flex items-center justify-between gap-2 rounded-xl bg-surface-raised px-3 py-2">
-      <span className="text-sm">
-        Team <span className="font-semibold">{invite.teamName}</span> lädt dich ein
-      </span>
-      <div className="flex gap-2">
-        <button
-          disabled={pending}
-          onClick={() => respond(acceptInvite)}
-          className="flex h-9 w-9 items-center justify-center rounded-lg bg-success text-success-foreground cursor-pointer disabled:opacity-50"
-          aria-label="Annehmen"
-        >
-          <Check size={18} weight="bold" />
-        </button>
-        <button
-          disabled={pending}
-          onClick={() => respond(declineInvite)}
-          className="flex h-9 w-9 items-center justify-center rounded-lg bg-destructive text-destructive-foreground cursor-pointer disabled:opacity-50"
-          aria-label="Ablehnen"
-        >
-          <X size={18} weight="bold" />
-        </button>
+    <li className="rounded-xl bg-surface-raised px-3 py-2">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm">
+          Team <span className="font-semibold">{invite.teamName}</span> lädt dich ein
+        </span>
+        <div className="flex gap-2">
+          <button
+            disabled={pending}
+            onClick={() => respond(acceptInvite)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg bg-success text-success-foreground cursor-pointer disabled:opacity-50"
+            aria-label="Annehmen"
+          >
+            <Check size={18} weight="bold" />
+          </button>
+          <button
+            disabled={pending}
+            onClick={() => respond(declineInvite)}
+            className="flex h-9 w-9 items-center justify-center rounded-lg bg-destructive text-destructive-foreground cursor-pointer disabled:opacity-50"
+            aria-label="Ablehnen"
+          >
+            <X size={18} weight="bold" />
+          </button>
+        </div>
       </div>
+      {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
     </li>
   );
 }
@@ -163,6 +170,21 @@ function TeamCard({
   sentInvites: { id: string; username: string }[];
   onDone: () => void;
 }) {
+  const [disbanding, setDisbanding] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleDisband() {
+    if (!confirm(`"${team.name}" wirklich auflösen? Das kann nicht rückgängig gemacht werden.`)) {
+      return;
+    }
+    setDisbanding(true);
+    setError(null);
+    const res = await disbandTeam(team.id);
+    setDisbanding(false);
+    if (res.error) setError(res.error);
+    else onDone();
+  }
+
   return (
     <Card>
       <h2 className="mb-3 font-heading text-xl font-bold">{team.name}</h2>
@@ -179,7 +201,23 @@ function TeamCard({
             <span>{player2.username}</span>
           </div>
         ) : (
-          <InviteSearch teamId={team.id} sentInvites={sentInvites} onDone={onDone} />
+          <>
+            <InviteSearch teamId={team.id} sentInvites={sentInvites} onDone={onDone} />
+            <div className="border-t border-border pt-3">
+              <button
+                onClick={handleDisband}
+                disabled={disbanding}
+                className="text-sm text-destructive underline-offset-2 hover:underline cursor-pointer disabled:opacity-50"
+              >
+                {disbanding ? "Wird aufgelöst…" : "Team auflösen"}
+              </button>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Nur möglich, solange noch kein zweiter Spieler dabei ist — z.B. um
+                stattdessen eine andere Einladung anzunehmen.
+              </p>
+              {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
+            </div>
+          </>
         )}
       </div>
     </Card>

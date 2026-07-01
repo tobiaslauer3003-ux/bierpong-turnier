@@ -210,6 +210,10 @@ export interface Database {
         Args: { p_invite_id: string };
         Returns: undefined;
       };
+      disband_team: {
+        Args: { p_team_id: string };
+        Returns: undefined;
+      };
       submit_match_result: {
         Args: { p_match_id: string; p_score_a: number; p_score_b: number };
         Returns: undefined;

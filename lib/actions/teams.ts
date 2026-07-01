@@ -96,3 +96,13 @@ export async function declineInvite(inviteId: string): Promise<ActionState> {
   revalidatePath("/teams");
   return { ok: true };
 }
+
+export async function disbandTeam(teamId: string): Promise<ActionState> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("disband_team", {
+    p_team_id: teamId,
+  });
+  if (error) return { error: error.message };
+  revalidatePath("/teams");
+  return { ok: true };
+}
