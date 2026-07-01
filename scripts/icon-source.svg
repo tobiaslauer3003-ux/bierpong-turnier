@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <clipPath id="round-bg">
+      <rect x="0" y="0" width="512" height="512" rx="96" ry="96" />
+    </clipPath>
+  </defs>
+
+  <!-- background variant is swapped by the render script (rounded vs full-bleed) -->
+  <rect id="bg" x="0" y="0" width="512" height="512" fill="#0B0A08" />
+
+  <g id="mark">
+    <!-- bottom-left cup -->
+    <circle cx="178" cy="322" r="72" fill="#F59E0B" />
+    <ellipse cx="178" cy="280" rx="58" ry="18" fill="#FBBF24" />
+
+    <!-- bottom-right cup -->
+    <circle cx="334" cy="322" r="72" fill="#F59E0B" />
+    <ellipse cx="334" cy="280" rx="58" ry="18" fill="#FBBF24" />
+
+    <!-- top cup -->
+    <circle cx="256" cy="190" r="72" fill="#F59E0B" />
+    <ellipse cx="256" cy="148" rx="58" ry="18" fill="#FBBF24" />
+
+    <!-- ping pong ball -->
+    <circle cx="368" cy="128" r="38" fill="#FDE68A" stroke="#0B0A08" stroke-width="4" />
+    <path d="M 348 118 Q 368 138 388 118" stroke="#0B0A08" stroke-width="3" fill="none" opacity="0.5" />
+  </g>
+</svg>

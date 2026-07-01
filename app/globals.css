@@ -1,0 +1,83 @@
+@import "tailwindcss";
+
+:root {
+  --color-background: #0b0a08;
+  --color-surface: #1c1712;
+  --color-surface-raised: #241d15;
+  --color-foreground: #fde68a;
+  --color-muted-foreground: #c9b896;
+  --color-primary: #f59e0b;
+  --color-primary-foreground: #1c1204;
+  --color-secondary: #fbbf24;
+  --color-secondary-foreground: #1c1204;
+  --color-success: #22c55e;
+  --color-success-foreground: #052e11;
+  --color-destructive: #dc2626;
+  --color-destructive-foreground: #fef2f2;
+  --color-border: #3d2e12;
+  --color-ring: #f59e0b;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --color-background: #fffbeb;
+    --color-surface: #ffffff;
+    --color-surface-raised: #fffdf5;
+    --color-foreground: #78350f;
+    --color-muted-foreground: #92702d;
+    --color-primary: #f59e0b;
+    --color-primary-foreground: #1c1204;
+    --color-secondary: #d97706;
+    --color-secondary-foreground: #fffbeb;
+    --color-success: #16a34a;
+    --color-success-foreground: #ffffff;
+    --color-destructive: #dc2626;
+    --color-destructive-foreground: #ffffff;
+    --color-border: #fde68a;
+    --color-ring: #f59e0b;
+  }
+}
+
+@theme inline {
+  --color-background: var(--color-background);
+  --color-surface: var(--color-surface);
+  --color-surface-raised: var(--color-surface-raised);
+  --color-foreground: var(--color-foreground);
+  --color-muted-foreground: var(--color-muted-foreground);
+  --color-primary: var(--color-primary);
+  --color-primary-foreground: var(--color-primary-foreground);
+  --color-secondary: var(--color-secondary);
+  --color-secondary-foreground: var(--color-secondary-foreground);
+  --color-success: var(--color-success);
+  --color-success-foreground: var(--color-success-foreground);
+  --color-destructive: var(--color-destructive);
+  --color-destructive-foreground: var(--color-destructive-foreground);
+  --color-border: var(--color-border);
+  --color-ring: var(--color-ring);
+  --font-heading: var(--font-outfit);
+  --font-body: var(--font-rubik);
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: var(--font-body), ui-sans-serif, system-ui, sans-serif;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-heading), ui-sans-serif, system-ui, sans-serif;
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+::selection {
+  background: var(--color-primary);
+  color: var(--color-primary-foreground);
+}
