@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { createTournament, type ActionState } from "@/lib/actions/tournaments";
 
-type Team = { id: string; name: string };
+type Team = { id: string; name: string; max_members: number; memberCount: number };
 
 const initialState: ActionState = {};
 
@@ -66,7 +66,7 @@ export function NewTournamentForm({ teams }: { teams: Team[] }) {
             </legend>
             {teams.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Es gibt noch keine vollständigen Teams (2 Spieler).
+                Es gibt noch keine Teams. Erst unter „Teams" welche gründen.
               </p>
             ) : (
               <div className="flex max-h-64 flex-col gap-2 overflow-y-auto rounded-xl border-2 border-border p-2">
@@ -81,7 +81,10 @@ export function NewTournamentForm({ teams }: { teams: Team[] }) {
                       value={team.id}
                       className="h-5 w-5 accent-primary"
                     />
-                    {team.name}
+                    <span className="flex-1">{team.name}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {team.memberCount}/{team.max_members}
+                    </span>
                   </label>
                 ))}
               </div>

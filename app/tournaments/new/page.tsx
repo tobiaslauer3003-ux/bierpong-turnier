@@ -11,9 +11,18 @@ export default async function NewTournamentPage() {
 
   const { data: teams } = await supabase
     .from("teams")
-    .select("id, name, player1_id, player2_id")
-    .not("player2_id", "is", null)
+    .select("id, name, max_members")
     .order("name");
 
-  return <NewTournamentForm teams={teams ?? []} />;
+  const teamIds = (teams ?? []).map((t) => t.id);
+  const { data: members } = teamIds.length
+    ? await supabase.from("team_members").select("team_id").in("team_id", teamIds)
+    : { data: [] };
+
+  const teamsWithCount = (teams ?? []).map((t) => ({
+    ...t,
+    memberCount: (members ?? []).filter((m) => m.team_id === t.id).length,
+  }));
+
+  return <NewTournamentForm teams={teamsWithCount} />;
 }

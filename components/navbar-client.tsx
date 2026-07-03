@@ -8,6 +8,7 @@ import {
   ChartBar,
   BookOpenText,
   UserCircle,
+  ShieldCheck,
 } from "@phosphor-icons/react/dist/ssr";
 import { cn } from "@/lib/cn";
 
@@ -21,9 +22,11 @@ const items = [
 export function NavbarClient({
   isLoggedIn,
   username,
+  isAdmin,
 }: {
   isLoggedIn: boolean;
   username: string | null;
+  isAdmin: boolean;
 }) {
   const pathname = usePathname();
 
@@ -31,11 +34,13 @@ export function NavbarClient({
     ? { href: "/profile", label: username ?? "Profil", icon: UserCircle }
     : { href: "/login", label: "Login", icon: UserCircle };
 
-  const allItems = [...items, profileItem];
+  const allItems = isAdmin
+    ? [...items, { href: "/admin", label: "Admin", icon: ShieldCheck }, profileItem]
+    : [...items, profileItem];
 
   return (
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 border-t-2 border-border bg-surface md:static md:border-t-0 md:border-b-2"
+      className="fixed bottom-0 left-0 right-0 z-40 border-t-2 border-border bg-surface pb-[env(safe-area-inset-bottom)] md:static md:border-t-0 md:border-b-2 md:pb-0"
       aria-label="Hauptnavigation"
     >
       <ul className="mx-auto flex max-w-3xl items-stretch justify-around md:justify-center md:gap-2 md:py-2">

@@ -89,6 +89,7 @@ export function MatchCard({
           <div className="flex items-center gap-2">
             <input
               type="number"
+              inputMode="numeric"
               min={0}
               max={10}
               value={scoreA}
@@ -99,6 +100,7 @@ export function MatchCard({
             <span className="text-muted-foreground">:</span>
             <input
               type="number"
+              inputMode="numeric"
               min={0}
               max={10}
               value={scoreB}

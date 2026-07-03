@@ -2,36 +2,50 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
-import { MagnifyingGlass, Check, X, EnvelopeSimple } from "@phosphor-icons/react/dist/ssr";
+import {
+  MagnifyingGlass,
+  Check,
+  X,
+  EnvelopeSimple,
+  UsersThree,
+  Crown,
+} from "@phosphor-icons/react/dist/ssr";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar } from "@/components/avatar";
+import { ImageUploadButton } from "@/components/image-upload-button";
 import { teamNameSchema } from "@/lib/validation";
+import { colorFromString } from "@/lib/palette";
+import type { Team } from "@/lib/database.types";
 import {
   createTeam,
   inviteToTeam,
   acceptInvite,
   declineInvite,
   disbandTeam,
+  leaveTeam,
+  updateTeamImageUrl,
 } from "@/lib/actions/teams";
 
-type Player = { username: string; avatar_color: string } | null;
+type Member = { id: string; username: string; avatar_color: string; avatar_url: string | null };
 type SearchResult = { id: string; username: string; avatar_color: string };
+type TeamWithDetails = {
+  team: Team;
+  members: Member[];
+  sentInvites: { id: string; username: string }[];
+};
 
 export function TeamsClient({
-  team,
-  player1,
-  player2,
-  sentInvites,
+  myUserId,
+  teams,
   receivedInvites,
 }: {
-  team: { id: string; name: string; player1_id: string; player2_id: string | null } | null;
-  player1: Player;
-  player2: Player;
-  sentInvites: { id: string; username: string }[];
+  myUserId: string;
+  teams: TeamWithDetails[];
   receivedInvites: { id: string; teamId: string; teamName: string }[];
 }) {
   const router = useRouter();
+  const onDone = () => router.refresh();
 
   return (
     <main className="mx-auto max-w-lg px-4 py-8">
@@ -45,23 +59,28 @@ export function TeamsClient({
           </div>
           <ul className="flex flex-col gap-2">
             {receivedInvites.map((invite) => (
-              <InviteRow key={invite.id} invite={invite} onDone={() => router.refresh()} />
+              <InviteRow key={invite.id} invite={invite} onDone={onDone} />
             ))}
           </ul>
         </Card>
       )}
 
-      {team ? (
-        <TeamCard
-          team={team}
-          player1={player1}
-          player2={player2}
-          sentInvites={sentInvites}
-          onDone={() => router.refresh()}
-        />
-      ) : (
-        <CreateTeamCard onDone={() => router.refresh()} />
+      {teams.length > 0 && (
+        <div className="mb-4 flex flex-col gap-4">
+          {teams.map(({ team, members, sentInvites }) => (
+            <TeamCard
+              key={team.id}
+              team={team}
+              members={members}
+              sentInvites={sentInvites}
+              myUserId={myUserId}
+              onDone={onDone}
+            />
+          ))}
+        </div>
       )}
+
+      <CreateTeamCard onDone={onDone} />
     </main>
   );
 }
@@ -117,6 +136,7 @@ function InviteRow({
 
 function CreateTeamCard({ onDone }: { onDone: () => void }) {
   const [name, setName] = useState("");
+  const [maxMembers, setMaxMembers] = useState("2");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
@@ -131,15 +151,19 @@ function CreateTeamCard({ onDone }: { onDone: () => void }) {
     setError(null);
     const formData = new FormData();
     formData.set("name", parsed.data);
+    formData.set("maxMembers", maxMembers);
     const res = await createTeam({}, formData);
     setPending(false);
     if (res.error) setError(res.error);
-    else onDone();
+    else {
+      setName("");
+      onDone();
+    }
   }
 
   return (
     <Card>
-      <h2 className="mb-3 font-heading text-lg font-semibold">Team gründen</h2>
+      <h2 className="mb-3 font-heading text-lg font-semibold">Neues Team gründen</h2>
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <input
           value={name}
@@ -148,6 +172,21 @@ function CreateTeamCard({ onDone }: { onDone: () => void }) {
           className="h-12 w-full rounded-xl border-2 border-border bg-background px-4 text-base outline-none focus:border-primary"
           required
         />
+        <div>
+          <label htmlFor="maxMembers" className="mb-1 block text-sm font-medium">
+            Maximale Teamgröße
+          </label>
+          <input
+            id="maxMembers"
+            type="number"
+            inputMode="numeric"
+            min={2}
+            max={20}
+            value={maxMembers}
+            onChange={(e) => setMaxMembers(e.target.value)}
+            className="h-12 w-24 rounded-xl border-2 border-border bg-background px-4 text-base outline-none focus:border-primary"
+          />
+        </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
         <Button type="submit" disabled={pending}>
           {pending ? "Wird erstellt…" : "Team gründen"}
@@ -159,67 +198,108 @@ function CreateTeamCard({ onDone }: { onDone: () => void }) {
 
 function TeamCard({
   team,
-  player1,
-  player2,
+  members,
   sentInvites,
+  myUserId,
   onDone,
 }: {
-  team: { id: string; name: string };
-  player1: Player;
-  player2: Player;
+  team: Team;
+  members: Member[];
   sentInvites: { id: string; username: string }[];
+  myUserId: string;
   onDone: () => void;
 }) {
-  const [disbanding, setDisbanding] = useState(false);
+  const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isCreator = team.created_by === myUserId;
+  const isFull = members.length >= team.max_members;
+
+  async function handleLeave() {
+    if (!confirm(`"${team.name}" wirklich verlassen?`)) return;
+    setPending(true);
+    setError(null);
+    const res = await leaveTeam(team.id);
+    setPending(false);
+    if (res.error) setError(res.error);
+    else onDone();
+  }
 
   async function handleDisband() {
-    if (!confirm(`"${team.name}" wirklich auflösen? Das kann nicht rückgängig gemacht werden.`)) {
+    if (!confirm(`"${team.name}" wirklich komplett auflösen? Das kann nicht rückgängig gemacht werden.`)) {
       return;
     }
-    setDisbanding(true);
+    setPending(true);
     setError(null);
     const res = await disbandTeam(team.id);
-    setDisbanding(false);
+    setPending(false);
     if (res.error) setError(res.error);
     else onDone();
   }
 
   return (
     <Card>
-      <h2 className="mb-3 font-heading text-xl font-bold">{team.name}</h2>
-      <div className="flex flex-col gap-3">
-        {player1 && (
-          <div className="flex items-center gap-3">
-            <Avatar username={player1.username} color={player1.avatar_color} size="sm" />
-            <span>{player1.username}</span>
-          </div>
-        )}
-        {player2 ? (
-          <div className="flex items-center gap-3">
-            <Avatar username={player2.username} color={player2.avatar_color} size="sm" />
-            <span>{player2.username}</span>
-          </div>
-        ) : (
-          <>
-            <InviteSearch teamId={team.id} sentInvites={sentInvites} onDone={onDone} />
-            <div className="border-t border-border pt-3">
-              <button
-                onClick={handleDisband}
-                disabled={disbanding}
-                className="text-sm text-destructive underline-offset-2 hover:underline cursor-pointer disabled:opacity-50"
-              >
-                {disbanding ? "Wird aufgelöst…" : "Team auflösen"}
-              </button>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Nur möglich, solange noch kein zweiter Spieler dabei ist — z.B. um
-                stattdessen eine andere Einladung anzunehmen.
-              </p>
-              {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
-            </div>
-          </>
+      <div className="mb-3 flex items-center gap-3">
+        <div className="relative">
+          <Avatar
+            username={team.name}
+            color={colorFromString(team.name)}
+            imageUrl={team.image_url}
+            size="lg"
+          />
+        </div>
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate font-heading text-xl font-bold">{team.name}</h2>
+          <p className="flex items-center gap-1 text-sm text-muted-foreground">
+            <UsersThree size={16} />
+            {members.length} / {team.max_members} Mitglieder
+          </p>
+        </div>
+      </div>
+
+      <ImageUploadButton
+        bucket="team-images"
+        path={`${team.id}/image.jpg`}
+        label="Team-Bild ändern"
+        onUploaded={async (url) => {
+          await updateTeamImageUrl(team.id, url);
+          onDone();
+        }}
+        className="mb-3"
+      />
+
+      <ul className="mb-3 flex flex-col gap-2">
+        {members.map((m) => (
+          <li key={m.id} className="flex items-center gap-3">
+            <Avatar username={m.username} color={m.avatar_color} imageUrl={m.avatar_url} size="sm" />
+            <span className="flex-1 text-sm">{m.username}</span>
+            {team.created_by === m.id && (
+              <Crown size={16} weight="fill" className="text-primary" aria-label="Gründer" />
+            )}
+          </li>
+        ))}
+      </ul>
+
+      {!isFull && <InviteSearch teamId={team.id} sentInvites={sentInvites} onDone={onDone} />}
+
+      <div className="mt-3 flex flex-wrap gap-4 border-t border-border pt-3">
+        <button
+          onClick={handleLeave}
+          disabled={pending}
+          className="text-sm text-muted-foreground underline-offset-2 hover:underline cursor-pointer disabled:opacity-50"
+        >
+          Team verlassen
+        </button>
+        {isCreator && (
+          <button
+            onClick={handleDisband}
+            disabled={pending}
+            className="text-sm text-destructive underline-offset-2 hover:underline cursor-pointer disabled:opacity-50"
+          >
+            Team auflösen
+          </button>
         )}
       </div>
+      {error && <p className="mt-2 text-sm text-destructive">{error}</p>}
     </Card>
   );
 }
@@ -273,9 +353,7 @@ function InviteSearch({
 
   return (
     <div>
-      <p className="mb-2 text-sm text-muted-foreground">
-        Noch ein Platz frei — such nach deinem Partner:
-      </p>
+      <p className="mb-2 text-sm text-muted-foreground">Weiteres Mitglied einladen:</p>
       <div className="relative">
         <MagnifyingGlass
           size={18}

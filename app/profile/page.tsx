@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/card";
-import { Avatar } from "@/components/avatar";
+import { ProfileAvatar } from "@/components/profile-avatar";
 import { LogoutButton } from "@/components/logout-button";
 import { UsersThree } from "@phosphor-icons/react/dist/ssr";
 
@@ -16,17 +16,19 @@ export default async function ProfilePage() {
     redirect("/login?next=/profile");
   }
 
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("username, avatar_color, created_at")
-    .eq("id", user.id)
-    .single();
+  const [{ data: profile }, { data: memberships }] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("username, avatar_color, avatar_url, created_at")
+      .eq("id", user.id)
+      .single(),
+    supabase.from("team_members").select("team_id").eq("user_id", user.id),
+  ]);
 
-  const { data: team } = await supabase
-    .from("teams")
-    .select("id, name, player1_id, player2_id")
-    .or(`player1_id.eq.${user.id},player2_id.eq.${user.id}`)
-    .maybeSingle();
+  const teamIds = (memberships ?? []).map((m) => m.team_id);
+  const { data: teams } = teamIds.length
+    ? await supabase.from("teams").select("id, name").in("id", teamIds)
+    : { data: [] };
 
   if (!profile) {
     return null;
@@ -41,28 +43,29 @@ export default async function ProfilePage() {
     <main className="mx-auto max-w-lg px-4 py-8">
       <h1 className="mb-6 font-heading text-3xl font-bold text-primary">Profil</h1>
 
-      <Card className="flex items-center gap-4">
-        <Avatar username={profile.username} color={profile.avatar_color} size="lg" />
-        <div>
-          <p className="font-heading text-xl font-bold">{profile.username}</p>
-          <p className="text-sm text-muted-foreground">Dabei seit {memberSince}</p>
-        </div>
+      <Card>
+        <ProfileAvatar
+          userId={user.id}
+          username={profile.username}
+          avatarColor={profile.avatar_color}
+          avatarUrl={profile.avatar_url}
+        />
+        <p className="mt-3 text-sm text-muted-foreground">Dabei seit {memberSince}</p>
       </Card>
 
       <Card className="mt-4">
         <div className="mb-2 flex items-center gap-2 font-heading font-semibold">
           <UsersThree size={22} className="text-primary" />
-          Mein Team
+          Meine Teams
         </div>
-        {team ? (
-          <p>
-            <span className="font-semibold">{team.name}</span>
-            {!team.player2_id && (
-              <span className="ml-2 text-sm text-muted-foreground">
-                (wartet auf zweiten Spieler)
-              </span>
-            )}
-          </p>
+        {teams && teams.length > 0 ? (
+          <ul className="flex flex-col gap-1">
+            {teams.map((t) => (
+              <li key={t.id} className="font-semibold">
+                {t.name}
+              </li>
+            ))}
+          </ul>
         ) : (
           <p className="text-sm text-muted-foreground">
             Du bist noch in keinem Team.
@@ -72,7 +75,7 @@ export default async function ProfilePage() {
           href="/teams"
           className="mt-3 inline-block text-sm font-semibold text-primary"
         >
-          Team verwalten →
+          Teams verwalten →
         </Link>
       </Card>
 

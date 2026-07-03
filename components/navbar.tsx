@@ -8,14 +8,16 @@ export async function Navbar() {
   } = await supabase.auth.getUser();
 
   let username: string | null = null;
+  let isAdmin = false;
   if (user) {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("username")
+      .select("username, role")
       .eq("id", user.id)
       .single();
     username = profile?.username ?? null;
+    isAdmin = profile?.role === "admin";
   }
 
-  return <NavbarClient isLoggedIn={!!user} username={username} />;
+  return <NavbarClient isLoggedIn={!!user} username={username} isAdmin={isAdmin} />;
 }

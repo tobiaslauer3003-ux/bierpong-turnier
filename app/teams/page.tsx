@@ -12,12 +12,8 @@ export default async function TeamsPage() {
     redirect("/login?next=/teams");
   }
 
-  const [{ data: team }, { data: rawReceivedInvites }] = await Promise.all([
-    supabase
-      .from("teams")
-      .select("id, name, player1_id, player2_id")
-      .or(`player1_id.eq.${user.id},player2_id.eq.${user.id}`)
-      .maybeSingle(),
+  const [{ data: myMemberships }, { data: rawReceivedInvites }] = await Promise.all([
+    supabase.from("team_members").select("team_id").eq("user_id", user.id),
     supabase
       .from("team_invites")
       .select("id, team_id")
@@ -25,75 +21,63 @@ export default async function TeamsPage() {
       .eq("status", "pending"),
   ]);
 
-  let player1: { username: string; avatar_color: string } | null = null;
-  let player2: { username: string; avatar_color: string } | null = null;
-  let sentInvites: { id: string; username: string }[] = [];
-  let receivedInvites: { id: string; teamId: string; teamName: string }[] = [];
+  const myTeamIds = (myMemberships ?? []).map((m) => m.team_id);
 
-  const [profilesResult, sentInvitesRawResult, receivedTeamsResult] = await Promise.all([
-    team
-      ? supabase
-          .from("profiles")
-          .select("id, username, avatar_color")
-          .in("id", [team.player1_id, team.player2_id].filter(Boolean) as string[])
-      : Promise.resolve({ data: null }),
-    team && !team.player2_id
-      ? supabase
-          .from("team_invites")
-          .select("id, invited_user_id")
-          .eq("team_id", team.id)
-          .eq("status", "pending")
-      : Promise.resolve({ data: null }),
-    rawReceivedInvites && rawReceivedInvites.length > 0
-      ? supabase
-          .from("teams")
-          .select("id, name")
-          .in(
-            "id",
-            rawReceivedInvites.map((i) => i.team_id),
-          )
-      : Promise.resolve({ data: null }),
-  ]);
+  const [{ data: teams }, { data: allMembers }, { data: sentInvitesRaw }, { data: receivedTeams }] =
+    await Promise.all([
+      myTeamIds.length
+        ? supabase.from("teams").select("*").in("id", myTeamIds)
+        : Promise.resolve({ data: [] as never[] }),
+      myTeamIds.length
+        ? supabase.from("team_members").select("team_id, user_id").in("team_id", myTeamIds)
+        : Promise.resolve({ data: [] as never[] }),
+      myTeamIds.length
+        ? supabase
+            .from("team_invites")
+            .select("id, team_id, invited_user_id")
+            .in("team_id", myTeamIds)
+            .eq("status", "pending")
+        : Promise.resolve({ data: [] as never[] }),
+      rawReceivedInvites && rawReceivedInvites.length > 0
+        ? supabase
+            .from("teams")
+            .select("id, name")
+            .in(
+              "id",
+              rawReceivedInvites.map((i) => i.team_id),
+            )
+        : Promise.resolve({ data: [] as never[] }),
+    ]);
 
-  if (team) {
-    const profiles = profilesResult.data;
-    player1 = profiles?.find((p) => p.id === team.player1_id) ?? null;
-    player2 = team.player2_id
-      ? (profiles?.find((p) => p.id === team.player2_id) ?? null)
-      : null;
-  }
-
-  const sentInvitesRaw = sentInvitesRawResult.data;
-  if (sentInvitesRaw && sentInvitesRaw.length > 0) {
-    const { data: invitedProfiles } = await supabase
-      .from("profiles")
-      .select("id, username")
-      .in(
-        "id",
-        sentInvitesRaw.map((i) => i.invited_user_id),
-      );
-    sentInvites = sentInvitesRaw.map((i) => ({
-      id: i.id,
-      username: invitedProfiles?.find((p) => p.id === i.invited_user_id)?.username ?? "?",
-    }));
-  }
-
-  const receivedTeams = receivedTeamsResult.data;
-  if (rawReceivedInvites && rawReceivedInvites.length > 0) {
-    receivedInvites = rawReceivedInvites.map((i) => ({
-      id: i.id,
-      teamId: i.team_id,
-      teamName: receivedTeams?.find((t) => t.id === i.team_id)?.name ?? "Unbekanntes Team",
-    }));
-  }
-
-  return (
-    <TeamsClient
-      team={team ?? null}
-      player1={player1}
-      player2={player2}
-      sentInvites={sentInvites}
-      receivedInvites={receivedInvites}
-    />
+  const memberUserIds = Array.from(
+    new Set([...(allMembers ?? []).map((m) => m.user_id), ...(sentInvitesRaw ?? []).map((i) => i.invited_user_id)]),
   );
+
+  const { data: profiles } = memberUserIds.length
+    ? await supabase
+        .from("profiles")
+        .select("id, username, avatar_color, avatar_url")
+        .in("id", memberUserIds)
+    : { data: [] };
+
+  const profileById = new Map((profiles ?? []).map((p) => [p.id, p]));
+
+  const teamsWithDetails = (teams ?? []).map((team) => ({
+    team,
+    members: (allMembers ?? [])
+      .filter((m) => m.team_id === team.id)
+      .map((m) => profileById.get(m.user_id))
+      .filter((p): p is NonNullable<typeof p> => !!p),
+    sentInvites: (sentInvitesRaw ?? [])
+      .filter((i) => i.team_id === team.id)
+      .map((i) => ({ id: i.id, username: profileById.get(i.invited_user_id)?.username ?? "?" })),
+  }));
+
+  const receivedInvites = (rawReceivedInvites ?? []).map((i) => ({
+    id: i.id,
+    teamId: i.team_id,
+    teamName: receivedTeams?.find((t) => t.id === i.team_id)?.name ?? "Unbekanntes Team",
+  }));
+
+  return <TeamsClient myUserId={user.id} teams={teamsWithDetails} receivedInvites={receivedInvites} />;
 }

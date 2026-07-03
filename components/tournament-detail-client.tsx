@@ -15,7 +15,7 @@ import {
 import { suggestGroupCount } from "@/lib/bracket";
 import type { Match, Tournament, TournamentTeam } from "@/lib/database.types";
 
-type Team = { id: string; name: string; player1_id: string; player2_id: string | null };
+type Team = { id: string; name: string };
 
 const statusLabel: Record<string, string> = {
   draft: "Geplant",
@@ -187,6 +187,7 @@ export function TournamentDetailClient({
           <div className="flex items-center gap-3">
             <input
               type="number"
+              inputMode="numeric"
               min={1}
               max={Math.floor(tournamentTeams.length / 2)}
               value={numGroups}
@@ -298,10 +299,10 @@ function BracketView({
   const totalRounds = rounds.length > 0 ? rounds[rounds.length - 1].round : 0;
 
   return (
-    <div className="-mx-4 overflow-x-auto px-4 pb-4">
+    <div className="-mx-4 overflow-x-auto px-4 pb-4 snap-x snap-proximity scroll-smooth">
       <div className="flex gap-6">
         {rounds.map(({ round, matches: roundMatches }) => (
-          <div key={round} className="flex flex-col gap-4">
+          <div key={round} className="flex flex-col gap-4 snap-start">
             <h3 className="font-heading text-sm font-semibold uppercase text-muted-foreground">
               {roundLabel(round, totalRounds)}
             </h3>

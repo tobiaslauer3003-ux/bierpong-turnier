@@ -53,7 +53,7 @@ export default function RootLayout({
     >
       <body className="min-h-dvh flex flex-col bg-background text-foreground font-body">
         <ServiceWorkerRegister />
-        <div className="flex-1 pb-20 md:pb-0">{children}</div>
+        <div className="flex-1 pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0">{children}</div>
         <Navbar />
       </body>
     </html>

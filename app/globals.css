@@ -77,6 +77,15 @@ h6 {
   border-color: var(--color-border);
 }
 
+a,
+button,
+input,
+select,
+textarea,
+[role="button"] {
+  touch-action: manipulation;
+}
+
 ::selection {
   background: var(--color-primary);
   color: var(--color-primary-foreground);
